@@ -169,6 +169,9 @@ void IridiumSBD::setPowerProfile(POWERPROFILE profile) // 0 = direct connect (de
 void IridiumSBD::adjustATTimeout(int seconds)
 {
    this->atTimeout = seconds;
+   // Ensure SBD Session Timeout is slightly lower than AT timeout to prevent ISBD_PROTOCOL_ERROR when an SBDIX attempt takes longer than AT timeout
+   if (!this->asleep)
+      internalSetSBDST(atTimeout - 1);
 }
 
 // Tweak Send/Receive SBDIX process timeout
@@ -581,12 +584,12 @@ int IridiumSBD::internalBegin()
          return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
    }
 
-   // Set SBD Session Timeout slightly lower than AT timeout
-   send(F("AT+SBDST="), true, false);
-   send(atTimeout - 1);
-   send(F("\r"), false);
-   if (!waitForATResponse())
-      return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
+   // Set SBD Session Timeout slightly lower than AT timeout to prevent ISBD_PROTOCOL_ERROR when an SBDIX attempt takes longer than AT timeout
+   int ret = internalSetSBDST(atTimeout - 1);
+   if (ret != ISBD_SUCCESS)
+   {
+      return ret;
+   }
 
    // Enable or disable RING alerts as requested by user
    // By default they are on if a RING pin was supplied on constructor
@@ -604,7 +607,7 @@ int IridiumSBD::internalBegin()
    // Decide whether the internal MSSTM workaround should be enforced on TX/RX
    // By default it is unless the firmware rev is >= TA13001
    char version[8];
-   int ret = getFirmwareVersion(version, sizeof(version));
+   ret = getFirmwareVersion(version, sizeof(version));
    if (ret != ISBD_SUCCESS)
    {
       diagprint(F("Unknown FW version\r\n"));
@@ -1683,6 +1686,18 @@ int IridiumSBD::internalGetIMEI(char *IMEI, size_t bufferSize)
 
    send(F("AT+CGSN\r"));
    if (!waitForATResponse(IMEI, bufferSize, "\n"))
+      return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
+
+   return ISBD_SUCCESS;
+}
+
+int IridiumSBD::internalSetSBDST(int seconds)
+// Set the SBD Session Timeout
+{
+   send(F("AT+SBDST="), true, false);
+   send(seconds);
+   send(F("\r"), false);
+   if (!waitForATResponse())
       return cancelled() ? ISBD_CANCELLED : ISBD_PROTOCOL_ERROR;
 
    return ISBD_SUCCESS;

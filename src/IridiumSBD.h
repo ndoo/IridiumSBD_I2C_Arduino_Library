@@ -313,6 +313,9 @@ private:
    // https://github.com/mikalhart/IridiumSBD/pull/21
    int internalGetIMEI(char *IMEI, size_t bufferSize);
 
+   // Set the SBD Session Timeout
+   int internalSetSBDST(int seconds);
+
    // Functions to support I2C to serial pass thru
    int internalPassThruI2Cread(uint8_t *rxBuffer, size_t &rxBufferSize, size_t &numBytes);
    int internalPassThruI2Cwrite(uint8_t *txBuffer, size_t &txBufferSize);
