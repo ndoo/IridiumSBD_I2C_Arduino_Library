@@ -110,7 +110,7 @@ public:
    bool hasRingAsserted();
    int sleep();
 
-   typedef enum { DEFAULT_POWER_PROFILE = 0, USB_POWER_PROFILE = 1 } POWERPROFILE;
+   typedef enum { DEFAULT_POWER_PROFILE = 0, USB_POWER_PROFILE = 1, ADAPTIVE_POWER_PROFILE = 2 } POWERPROFILE;
    void setPowerProfile(POWERPROFILE profile); // 0 = direct connect (default), 1 = USB
    void adjustATTimeout(int seconds);          // default value = 30 seconds
    void adjustSendReceiveTimeout(int seconds); // default value = 300 seconds
@@ -217,6 +217,7 @@ private:
 
    // Timings
    int sbdixInterval;
+   int sbdixAdaptiveIntervals[4] = {5, 5, 30, 30};
    int atTimeout;
    int sendReceiveTimeout;
    int startupTimeout;

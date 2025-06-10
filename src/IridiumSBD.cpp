@@ -162,6 +162,8 @@ void IridiumSBD::setPowerProfile(POWERPROFILE profile) // 0 = direct connect (de
    case USB_POWER_PROFILE:
       this->sbdixInterval = ISBD_USB_SBDIX_INTERVAL;
       break;
+   case ADAPTIVE_POWER_PROFILE:
+      this->sbdixInterval = -1;
    }
 }
 
@@ -742,6 +744,7 @@ int IridiumSBD::internalSendReceiveSBD(const char *txTxtMessage, const uint8_t *
    }
 
    // Long SBDIX loop begins here
+   int retries = 0;
    for (unsigned long start = millis(); millis() - start < 1000UL * this->sendReceiveTimeout;)
    {
       bool okToProceed = true;
@@ -792,9 +795,27 @@ int IridiumSBD::internalSendReceiveSBD(const char *txTxtMessage, const uint8_t *
 
          else // retry
          {
-            diagprint(F("Waiting for SBDIX retry...\r\n"));
-            if (!noBlockWait(sbdixInterval))
-               return ISBD_CANCELLED;
+            if (sbdixInterval == -1)
+            {
+               int interval;
+               size_t interval_size = sizeof(sbdixAdaptiveIntervals) / sizeof(sbdixAdaptiveIntervals[0]);
+               if (retries > interval_size)
+                  retries = interval_size;
+               interval = random(sbdixAdaptiveIntervals[retries - 1]);
+
+               diagprint(F("Waiting for SBDIX retry (adaptive: "));
+               diagprint(interval);
+               diagprint(F(")...\r\n"));
+               if (!noBlockWait(interval))
+                  return ISBD_CANCELLED;
+               retries++;
+            }
+            else
+            {
+               diagprint(F("Waiting for SBDIX retry...\r\n"));
+               if (!noBlockWait(sbdixInterval))
+                  return ISBD_CANCELLED;
+            }
          }
       }
 
